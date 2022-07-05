@@ -1,52 +1,44 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <chrono>
+#include "utils.cpp"
 #include "seq_detector.cpp"
+#include "par_detector.cpp"
+//#include "ff_detector.cpp"
 
 using namespace std;
 using namespace cv;
 
-Mat avgKernel()
+void runAnalysis(String label, Detector *detector, String videoPath, bool show = false)
 {
-  const int rows = 3;
-  const int cols = 3;
-  double m[rows][cols] = {
-    {1, 1, 1},
-    {1, 1, 1}, 
-    {1, 1, 1}
-  };
-  int sum = 0;
-  for(int kx=0;kx<rows;kx++)
-    for(int ky=0;ky<cols;ky++)
-      sum += m[kx][ky];
-  for(int kx=0;kx<rows;kx++)
-    for(int ky=0;ky<cols;ky++)
-      m[kx][ky] /= sum;
-  return Mat(3, 3, CV_64F, m);
-}
+  auto t_start = chrono::high_resolution_clock::now();
+  int differentFrames = analyzeFrames(detector, videoPath, show);
+  auto t_end =chrono::high_resolution_clock::now();
+  double elapsed_time_ms = chrono::duration<double>(t_end-t_start).count();
 
+  cout 
+  << "--------------------------------" << endl << 
+  label << endl <<
+  "Number of different frames: " << differentFrames << endl << 
+  "Time: " << elapsed_time_ms << " seconds" << endl
+  << "--------------------------------" << endl;
+}
 
 int main(int argc, char * argv[]) 
 {
   String videoPath = argv[1];
   double k = atof(argv[2]);
-  int differentFrames = 0;
-  VideoCapture cap(videoPath);
-  Mat background; 
-  cap >> background;
+
   Mat kernel = avgKernel();
-  SeqDetector *detector = new SeqDetector(background, kernel, k);
-  detector->transformAndCompute(background);
-  while(true) {
-    Mat frame; 
-    cap >> frame;
-    if(frame.empty())
-      break;
-    bool differs = detector->transformAndCompute(frame);
-    if(differs)
-      differentFrames ++; 
-    //imshow("img", frame ); waitKey(1); // TODO: show video
+
+  runAnalysis("SEQUENTIAL", new SeqDetector(kernel, k), videoPath);
+  int nws[] = {1, 4, 8, 16};
+  for(int nw : nws) {
+    runAnalysis("PARALLEL_"+to_string(nw)+"_NW", new ParDetector(kernel, k, nw), videoPath);
   }
-  cap.release();
-  cout << "Number of different frames: " << differentFrames << endl;
+  for(int nw : nws) {
+    //runAnalysis("FASTFLOW_"+to_string(nw)+"_NW", new FFDetector(kernel, k, nw), videoPath);
+  }
+
   return(0);
 }
