@@ -1,36 +1,26 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <thread>
 #include <functional>
 #include "detector.hpp"
+#include <ff/parallel_for.hpp>
 
+using namespace ff;
 using namespace std;
 using namespace cv;
 
-class ParDetector : public Detector {
+class FFDetector : public Detector {
     private:
         int nw;
 
         void runParallel(function<void(int)> internalCallback, Mat frame) {
-            vector<thread *> threads;
-            for(int t=0; t<this->nw; t++) {
-                auto callback = [&] (int n) {
-                    int bin = frame.rows / this->nw;
-                    int end = (n+1) * bin;
-                    end = end < frame.rows ? end : frame.rows;
-                    for(int x = n * bin; x < end; x++) {
-                        internalCallback(x);
-                    }
-                };
-                threads.push_back(new thread(callback, t));
-            }
-            for(int t=0; t<this->nw; t++) {
-                threads[t]->join();
-            }
+            ParallelFor pf;
+            pf.parallel_for(0, frame.rows, [&](const long x) {
+                internalCallback(x);
+            });
         }
         
     public:
-        ParDetector(Mat _kernel, double _k, int _nw) : Detector(_kernel, _k) {
+        FFDetector(Mat _kernel, double _k, int _nw) : Detector(_kernel, _k) {
             this->nw = _nw;
         }
 
@@ -50,7 +40,7 @@ class ParDetector : public Detector {
         }
 
         bool makeDifference(Mat frame) override {
-            int summedResult = 0;
+            int summedResult(0);
             int threshold = this->k * this->background.cols * this->background.rows;
             auto callback = [&] (int x) {
                 int res = this->rowMakeDifference(frame, x);
