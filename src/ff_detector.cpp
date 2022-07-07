@@ -1,6 +1,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <functional>
+#include <mutex>
 #include "detector.hpp"
 #include <ff/parallel_for.hpp>
 
@@ -16,7 +17,7 @@ class FFDetector : public Detector {
             ParallelFor pf;
             pf.parallel_for(0, frame.rows, [&](const long x) {
                 internalCallback(x);
-            });
+            }, this->nw);
         }
         
     public:
@@ -40,11 +41,14 @@ class FFDetector : public Detector {
         }
 
         bool makeDifference(Mat frame) override {
+            mutex m;
             int summedResult(0);
             int threshold = this->k * this->background.cols * this->background.rows;
             auto callback = [&] (int x) {
                 int res = this->rowMakeDifference(frame, x);
+                m.lock();
                 summedResult += res;
+                m.unlock();
             };
             this->runParallel(callback, frame);
             return summedResult >= threshold;

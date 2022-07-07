@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include <thread>
 #include <functional>
+#include <mutex>
 #include "detector.hpp"
 
 using namespace std;
@@ -50,11 +51,14 @@ class ParDetector : public Detector {
         }
 
         bool makeDifference(Mat frame) override {
-            int summedResult = 0;
+            mutex m;
+            int summedResult(0);
             int threshold = this->k * this->background.cols * this->background.rows;
             auto callback = [&] (int x) {
                 int res = this->rowMakeDifference(frame, x);
+                m.lock();
                 summedResult += res;
+                m.unlock();
             };
             this->runParallel(callback, frame);
             return summedResult >= threshold;

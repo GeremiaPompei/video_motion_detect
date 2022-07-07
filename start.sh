@@ -1,7 +1,7 @@
 # RUN AND COMPILE LOCALLY
 rm -rf build
 mkdir build
-g++ src/main.cpp -o build/main `pkg-config --cflags opencv4` `pkg-config --libs opencv4` -std=c++20
+g++-10 src/main.cpp -o build/main `pkg-config --cflags opencv4` `pkg-config --libs opencv4` -pthread -std=c++17
 ./build/main ./media/videoplayback.mp4 0.42
 
 # RUN AND COMPILE DOCKER
