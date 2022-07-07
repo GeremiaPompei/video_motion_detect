@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
   Mat kernel = avgKernel();
 
   runAnalysis("SEQUENTIAL", new SeqDetector(kernel, k), videoPath);
-  int nws[] = {1, 4, 8, 16};
+  int nws[] = {1, 4, 8, 16, 32};
   for(int nw : nws) {
     runAnalysis("PARALLEL_"+to_string(nw)+"_NW", new ParDetector(kernel, k, nw), videoPath);
   }

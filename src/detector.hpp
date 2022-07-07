@@ -64,8 +64,7 @@ class Detector {
             return this->makeDifference(frame);
         }
 
-        void setAndComputeBackground(Mat background) {
-            this->transformAndCompute(background);
+        void set(Mat background) {
             this->background = background;   
         }
 };
