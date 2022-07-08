@@ -4,7 +4,7 @@
 #include "utils.cpp"
 #include "seq_detector.cpp"
 #include "par_detector.cpp"
-//#include "ff_detector.cpp"
+#include "ff_detector.cpp"
 
 using namespace std;
 using namespace cv;
@@ -36,7 +36,7 @@ int main(int argc, char * argv[])
     runAnalysis("PARALLEL_"+to_string(nw)+"_NW", new ParDetector(kernel, k, nw), videoPath);
   }
   for(int nw : nws) {
-    //runAnalysis("FASTFLOW_"+to_string(nw)+"_NW", new FFDetector(kernel, k, nw), videoPath);
+    runAnalysis("FASTFLOW_"+to_string(nw)+"_NW", new FFDetector(kernel, k, nw), videoPath);
   }
 
   return(0);
