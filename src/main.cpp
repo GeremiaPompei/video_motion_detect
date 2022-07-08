@@ -11,17 +11,16 @@ using namespace cv;
 
 void runAnalysis(String label, Detector *detector, String videoPath, bool show = false)
 {
-  auto t_start = chrono::high_resolution_clock::now();
+  detector->timerHandler.start("TOTAL_TIME");
   int differentFrames = analyzeFrames(detector, videoPath, show);
-  auto t_end =chrono::high_resolution_clock::now();
-  double elapsed_time_ms = chrono::duration<double>(t_end-t_start).count();
+  detector->timerHandler.stop("TOTAL_TIME");
 
-  cout 
-  << "--------------------------------" << endl << 
+  cout << 
+  "--------------------------------" << endl << 
   label << endl <<
   "Number of different frames: " << differentFrames << endl << 
-  "Time: " << elapsed_time_ms << " seconds" << endl
-  << "--------------------------------" << endl;
+  detector->timerHandler.toString() << 
+  "--------------------------------" << endl;
 }
 
 int main(int argc, char * argv[]) 
@@ -32,7 +31,7 @@ int main(int argc, char * argv[])
   Mat kernel = avgKernel();
 
   runAnalysis("SEQUENTIAL", new SeqDetector(kernel, k), videoPath);
-  int nws[] = {1, 4, 8, 16};
+  int nws[] = {1, 4, 8, 16, 32};
   for(int nw : nws) {
     runAnalysis("PARALLEL_"+to_string(nw)+"_NW", new ParDetector(kernel, k, nw), videoPath);
   }

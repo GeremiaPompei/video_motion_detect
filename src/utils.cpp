@@ -26,14 +26,17 @@ int analyzeFrames(Detector *detector, String videoPath, bool show = false)
   VideoCapture cap(videoPath);
   Mat background; 
   cap >> background;
-  detector->setAndComputeBackground(background);
+  detector->transformAndCompute(background);
+  detector->set(background);
   while(true) {
     Mat frame; 
     cap >> frame;
     if(frame.empty()) break;
     bool differs = detector->transformAndCompute(frame);
-    if(differs)
+    if(differs) {
+      detector->set(background);
       differentFrames ++; 
+    }
     if(show) {
       imshow("img", frame ); 
       waitKey(1);

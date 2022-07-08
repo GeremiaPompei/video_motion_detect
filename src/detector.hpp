@@ -1,5 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include "timer_handler.hpp"
 
 using namespace std;
 using namespace cv;
@@ -11,8 +12,11 @@ class Detector {
         Mat background;
         Mat kernel;
         double k;
+
     
     public:
+        TimerHandler timerHandler;
+
         Detector(Mat _kernel, double _k) {
             this->kernel = _kernel;
             this->k = _k;
@@ -59,13 +63,19 @@ class Detector {
         }
         
         bool transformAndCompute(Mat frame) {
+            this->timerHandler.start("1_GRAYSCALE");
             this->gray(frame);
+            this->timerHandler.stop("1_GRAYSCALE");
+            this->timerHandler.start("2_SMOOTHING");
             this->smooth(frame);
-            return this->makeDifference(frame);
+            this->timerHandler.stop("2_SMOOTHING");
+            this->timerHandler.start("3_MAKE_DIFFERENCE");
+            int res = this->makeDifference(frame);
+            this->timerHandler.stop("3_MAKE_DIFFERENCE");
+            return res;
         }
 
-        void setAndComputeBackground(Mat background) {
-            this->transformAndCompute(background);
+        void set(Mat background) {
             this->background = background;   
         }
 };
