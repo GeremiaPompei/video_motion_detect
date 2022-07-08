@@ -8,7 +8,7 @@ using namespace std;
 #define HEADER_TIMER_HANDLER
 
 struct Timer {
-    chrono::time_point<std::chrono::steady_clock> t_start;
+    chrono::time_point<chrono::high_resolution_clock> t_start;
     bool stopped;
     double time;
 };
