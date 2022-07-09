@@ -63,15 +63,12 @@ class Detector {
         }
         
         bool transformAndCompute(Mat frame) {
-            this->timerHandler.start("1_GRAYSCALE");
-            this->gray(frame);
-            this->timerHandler.stop("1_GRAYSCALE");
-            this->timerHandler.start("2_SMOOTHING");
-            this->smooth(frame);
-            this->timerHandler.stop("2_SMOOTHING");
-            this->timerHandler.start("3_MAKE_DIFFERENCE");
-            int res = this->makeDifference(frame);
-            this->timerHandler.stop("3_MAKE_DIFFERENCE");
+            int res;
+            this->timerHandler.computeTime("TOTAL_TIME", [&]() { 
+                this->timerHandler.computeTime("1_GRAYSCALE", [&]() { this->gray(frame); });
+                this->timerHandler.computeTime("2_SMOOTHING", [&]() { this->smooth(frame); });
+                this->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { res = this->makeDifference(frame); });
+            });
             return res;
         }
 

@@ -11,9 +11,7 @@ using namespace cv;
 
 void runAnalysis(String label, Detector *detector, String videoPath, bool show = false)
 {
-  detector->timerHandler.start("TOTAL_TIME");
   int differentFrames = analyzeFrames(detector, videoPath, show);
-  detector->timerHandler.stop("TOTAL_TIME");
 
   cout << 
   "--------------------------------" << endl << 
