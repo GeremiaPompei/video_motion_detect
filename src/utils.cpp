@@ -60,9 +60,9 @@ int analyzeFramesPipeline(Detector *detector, string videoPath) {
     lock.unlock();
   };
 
-  Pipeline<Mat, int> pp3(cap.get(CAP_PROP_FRAME_COUNT),
-    [&](Mat frame) {detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { finalCallback(detector->makeDifference(frame), frame); }); return NULL;},
-    [&](int status) {}
+  Pipeline<Mat, bool> pp3(cap.get(CAP_PROP_FRAME_COUNT),
+    [&](Mat frame) {detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { finalCallback(detector->makeDifference(frame), frame); }); return false;},
+    [&](bool status) {}
   );
   Pipeline<Mat, Mat> pp2(cap.get(CAP_PROP_FRAME_COUNT),
     [&](Mat frame) {detector->timerHandler.computeTime("2_SMOOTHING", [&]() { detector->smooth(frame); }); return frame;},
