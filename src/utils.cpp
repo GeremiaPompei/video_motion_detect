@@ -1,12 +1,13 @@
 #include <iostream>
+#include <mutex>
 #include <opencv2/opencv.hpp>
 #include "detector.hpp"
+#include "pipeline.cpp"
 
 using namespace std;
 using namespace cv;
 
-Mat avgKernel()
-{
+Mat avgKernel() {
   const int rows = 3, cols = 3;
   Mat kernel = (Mat_<double>({
     1, 1, 1,
@@ -20,28 +21,72 @@ Mat avgKernel()
   return kernel;
 }
 
-int analyzeFrames(Detector *detector, String videoPath, bool show = false) 
-{
+int analyzeFramesSeq(Detector *detector, string videoPath) {
   int differentFrames = 0;
   VideoCapture cap(videoPath);
   Mat background; 
   cap >> background;
-  detector->transformAndCompute(background);
-  detector->set(background);
-  while(true) {
-    Mat frame; 
-    cap >> frame;
-    if(frame.empty()) break;
-    bool differs = detector->transformAndCompute(frame);
+  detector->timerHandler.computeTime("TOTAL_TIME", [&]() { 
+    detector->transformAndCompute(background);
+    detector->set(background);
+    while(true) {
+      Mat frame; 
+      cap >> frame;
+      if(frame.empty()) break;
+      bool differs = detector->transformAndCompute(frame);
+      if(differs) {
+        detector->set(frame);
+        differentFrames ++; 
+      }
+    }
+  });
+  cap.release();
+  return differentFrames;
+}
+
+int analyzeFramesPipeline(Detector *detector, string videoPath) {
+  int differentFrames = 0;
+  mutex lock;
+  VideoCapture cap(videoPath);
+  Mat background; 
+  cap >> background;
+
+  auto finalCallback = [&](bool differs, Mat frame) {
+    lock.lock();
     if(differs) {
-      detector->set(background);
-      differentFrames ++; 
+      detector->set(frame);
+      differentFrames ++;
     }
-    if(show) {
-      imshow("img", frame ); 
-      waitKey(1);
+    lock.unlock();
+  };
+
+  Pipeline<Mat, int> pp3(cap.get(CAP_PROP_FRAME_COUNT),
+    [&](Mat frame) {detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { finalCallback(detector->makeDifference(frame), frame); }); return NULL;},
+    [&](int status) {}
+  );
+  Pipeline<Mat, Mat> pp2(cap.get(CAP_PROP_FRAME_COUNT),
+    [&](Mat frame) {detector->timerHandler.computeTime("2_SMOOTHING", [&]() { detector->smooth(frame); }); return frame;},
+    [&](Mat frame) {pp3.run(frame);}
+  );
+  Pipeline<Mat, Mat> pp1(cap.get(CAP_PROP_FRAME_COUNT),
+    [&](Mat frame) {detector->timerHandler.computeTime("1_GRAYSCALE", [&]() { detector->gray(frame); }); return frame;},
+    [&](Mat frame) {pp2.run(frame);}
+  );
+
+  detector->timerHandler.computeTime("TOTAL_TIME", [&]() { 
+    detector->transformAndCompute(background);
+    detector->set(background);
+    while(true) {
+      Mat frame; 
+      cap >> frame;
+      if(frame.empty()) break;
+      pp1.run(frame);
     }
-  }
+    pp1.wait();
+    pp2.wait();
+    pp3.wait();
+  });
+
   cap.release();
   return differentFrames;
 }

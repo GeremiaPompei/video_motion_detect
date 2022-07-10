@@ -9,13 +9,13 @@
 using namespace std;
 using namespace cv;
 
-void runAnalysis(String label, Detector *detector, String videoPath, bool show = false)
+void runAnalysis(string label, Detector *detector, string videoPath, bool pipeline = false)
 {
-  int differentFrames = analyzeFrames(detector, videoPath, show);
+  int differentFrames = pipeline ? analyzeFramesPipeline(detector, videoPath) : analyzeFramesSeq(detector, videoPath);
 
   cout << 
   "--------------------------------" << endl << 
-  label << endl <<
+  label << endl << (pipeline ? "PIPELINE_ON" : "PIPELINE_OFF") << endl <<
   "Number of different frames: " << differentFrames << endl << 
   detector->timerHandler.toString() << 
   "--------------------------------" << endl;
@@ -23,18 +23,22 @@ void runAnalysis(String label, Detector *detector, String videoPath, bool show =
 
 int main(int argc, char * argv[]) 
 {
-  String videoPath = argv[1];
+  string videoPath = argv[1];
   double k = atof(argv[2]);
+  string type = argv[3];
+  bool pipeline = string(argv[4]) == "PIPELINE_ON";
 
   Mat kernel = avgKernel();
 
-  runAnalysis("SEQUENTIAL", new SeqDetector(kernel, k), videoPath);
-  int nws[] = {1, 2, 4, 8, 16, 32};
-  for(int nw : nws) {
-    runAnalysis("PARALLEL_"+to_string(nw)+"_NW", new ParDetector(kernel, k, nw), videoPath);
-  }
-  for(int nw : nws) {
-    runAnalysis("FASTFLOW_"+to_string(nw)+"_NW", new FFDetector(kernel, k, nw), videoPath);
+  if(type == "SEQUENTIAL") {
+    runAnalysis(type, new SeqDetector(kernel, k), videoPath, pipeline);
+  } else {
+    int nw = atoi(argv[5]);
+    if(type == "PARALLEL") {
+      runAnalysis("PARALLEL_"+to_string(nw)+"_NW", new ParDetector(kernel, k, nw), videoPath, pipeline);
+    } else if(type == "FASTFLOW") {
+      runAnalysis("FASTFLOW_"+to_string(nw)+"_NW", new FFDetector(kernel, k, nw), videoPath, pipeline);
+    }
   }
 
   return(0);
