@@ -4,7 +4,8 @@
 using namespace std;
 using namespace cv;
 
-Mat avgKernel() {
+Mat avgKernel() 
+{
   const int rows = 3, cols = 3;
   Mat kernel = (Mat_<double>({
     1, 1, 1,

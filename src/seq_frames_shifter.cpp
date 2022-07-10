@@ -6,15 +6,18 @@
 using namespace std;
 using namespace cv;
 
-class SeqFramesShifter: public FramesShifter {
-    public:
-        SeqFramesShifter(Detector *detector, string videoPath) : FramesShifter(detector, videoPath) {}
+class SeqFramesShifter : public FramesShifter
+{
+public:
+    SeqFramesShifter(Detector *detector, string videoPath) : FramesShifter(detector, videoPath) {}
 
-        int run() override {
-            int differentFrames = 0;
-            Mat background; 
-            this->cap >> background;
-            this->detector->timerHandler.computeTime("TOTAL_TIME", [&]() { 
+    int run() override
+    {
+        int differentFrames = 0;
+        Mat background;
+        this->cap >> background;
+        this->detector->timerHandler.computeTime("TOTAL_TIME", [&]()
+                                                 { 
                 this->detector->transformAndCompute(background);
                 this->detector->set(background);
                 while(true) {
@@ -26,9 +29,8 @@ class SeqFramesShifter: public FramesShifter {
                     this->detector->set(frame);
                     differentFrames ++; 
                 }
-                }
-            });
-            this->cap.release();
-            return differentFrames;
-        }
+                } });
+        this->cap.release();
+        return differentFrames;
+    }
 };

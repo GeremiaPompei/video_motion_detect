@@ -10,26 +10,30 @@ using namespace std;
 using namespace cv;
 using namespace ff;
 
-struct Emitter : ff_node_t<Mat> {
+struct Source : ff_node_t<Mat>
+{
     Detector *detector;
     VideoCapture cap;
 
-    Emitter(Detector *detector, VideoCapture cap) {
+    Source(Detector *detector, VideoCapture cap)
+    {
         this->detector = detector;
         this->cap = cap;
     }
 
-    Mat *svc(Mat *) {
+    Mat *svc(Mat *)
+    {
         mutex lock;
-        Mat background; 
+        Mat background;
         this->cap >> background;
-        
         this->detector->transformAndCompute(background);
         this->detector->set(background);
-        while(true) {
-            Mat *frame = new Mat(); 
+        while (true)
+        {
+            Mat *frame = new Mat();
             cap >> *frame;
-            if(frame->empty()) break;
+            if (frame->empty())
+                break;
             ff_send_out(frame);
         }
 
@@ -38,73 +42,88 @@ struct Emitter : ff_node_t<Mat> {
     }
 };
 
-struct GrayScale : ff_node_t<Mat> {
+struct GrayScale : ff_node_t<Mat>
+{
     Detector *detector;
 
-    GrayScale(Detector *detector) {
+    GrayScale(Detector *detector)
+    {
         this->detector = detector;
     }
 
-    Mat *svc(Mat *frame) {
-        this->detector->timerHandler.computeTime("1_GRAYSCALE", [&]() { this->detector->gray(*frame); });
+    Mat *svc(Mat *frame)
+    {
+        this->detector->timerHandler.computeTime("1_GRAYSCALE", [&]()
+                                                 { this->detector->gray(*frame); });
         return frame;
     }
 };
 
-struct Smoothing : ff_node_t<Mat> {
+struct Smoothing : ff_node_t<Mat>
+{
     Detector *detector;
 
-    Smoothing(Detector *detector) {
+    Smoothing(Detector *detector)
+    {
         this->detector = detector;
     }
 
-    Mat *svc(Mat *frame) {
-        this->detector->timerHandler.computeTime("2_SMOOTHING", [&]() { this->detector->smooth(*frame); });
+    Mat *svc(Mat *frame)
+    {
+        this->detector->timerHandler.computeTime("2_SMOOTHING", [&]()
+                                                 { this->detector->smooth(*frame); });
         return frame;
     }
 };
 
-struct MakeDifference : ff_node_t<Mat> {
+struct MakeDifference : ff_node_t<Mat>
+{
     Detector *detector;
     function<void(bool, Mat)> finalCallback;
 
-    MakeDifference(Detector *detector, function<void(bool, Mat)> finalCallback) {
+    MakeDifference(Detector *detector, function<void(bool, Mat)> finalCallback)
+    {
         this->detector = detector;
         this->finalCallback = finalCallback;
     }
 
-    Mat *svc(Mat *frame) {
-        this->detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { this->finalCallback(this->detector->makeDifference(*frame), *frame); });
+    Mat *svc(Mat *frame)
+    {
+        this->detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]()
+                                                 { this->finalCallback(this->detector->makeDifference(*frame), *frame); });
         return GO_ON;
     }
 };
 
-class FFFramesShifter: public FramesShifter {
-    public:
-        FFFramesShifter(Detector *detector, string videoPath) : FramesShifter(detector, videoPath) {}
+class FFFramesShifter : public FramesShifter
+{
+public:
+    FFFramesShifter(Detector *detector, string videoPath) : FramesShifter(detector, videoPath) {}
 
-        int run() override {
-            mutex lock;
-            int differentFrames = 0;
+    int run() override
+    {
+        mutex lock;
+        int differentFrames = 0;
 
-            auto finalCallback = [&](bool differs, Mat frame) {
-                lock.lock();
-                if(differs) {
+        auto finalCallback = [&](bool differs, Mat frame)
+        {
+            lock.lock();
+            if (differs)
+            {
                 this->detector->set(frame);
-                differentFrames ++;
-                }
-                lock.unlock();
-            };
+                differentFrames++;
+            }
+            lock.unlock();
+        };
 
-            Emitter emitter(this->detector, this->cap);
-            GrayScale grayScale(this->detector);
-            Smoothing smoothing(this->detector);
-            MakeDifference makeDifference(this->detector, finalCallback);
-            ff_Pipe<> pipe(emitter, grayScale, smoothing, makeDifference);
+        Source source(this->detector, this->cap);
+        GrayScale grayScale(this->detector);
+        Smoothing smoothing(this->detector);
+        MakeDifference makeDifference(this->detector, finalCallback);
+        ff_Pipe<> pipe(source, grayScale, smoothing, makeDifference);
 
-            this->detector->timerHandler.computeTime("TOTAL_TIME", [&]() {
-                pipe.run_and_wait_end();
-            });
-            return differentFrames;
-        }
+        this->detector->timerHandler.computeTime("TOTAL_TIME", [&]()
+                                                 { pipe.run_and_wait_end(); });
+        return differentFrames;
+    }
 };

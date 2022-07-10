@@ -8,18 +8,20 @@ using namespace cv;
 #ifndef HEADER_FRAMES_SHIFTER
 #define HEADER_FRAMES_SHIFTER
 
-class FramesShifter {
-    protected:
-        VideoCapture cap;
+class FramesShifter
+{
+protected:
+    VideoCapture cap;
 
-    public:
-        Detector *detector;
-        
-        FramesShifter(Detector *detector, string videoPath) {
-            this->detector = detector;
-            this->cap = VideoCapture(videoPath);
-        }
-    
-        virtual int run() = 0;
+public:
+    Detector *detector;
+
+    FramesShifter(Detector *detector, string videoPath)
+    {
+        this->detector = detector;
+        this->cap = VideoCapture(videoPath);
+    }
+
+    virtual int run() = 0;
 };
 #endif
