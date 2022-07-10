@@ -60,17 +60,14 @@ int analyzeFramesPipeline(Detector *detector, string videoPath) {
     lock.unlock();
   };
 
-  Pipeline<Mat, bool> pp3(cap.get(CAP_PROP_FRAME_COUNT),
-    [&](Mat frame) {detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { finalCallback(detector->makeDifference(frame), frame); }); return false;},
-    [&](bool status) {}
-  );
-  Pipeline<Mat, Mat> pp2(cap.get(CAP_PROP_FRAME_COUNT),
-    [&](Mat frame) {detector->timerHandler.computeTime("2_SMOOTHING", [&]() { detector->smooth(frame); }); return frame;},
-    [&](Mat frame) {pp3.run(frame);}
-  );
-  Pipeline<Mat, Mat> pp1(cap.get(CAP_PROP_FRAME_COUNT),
+  Pipeline<Mat, Mat> *pipeline = new Pipeline<Mat, Mat>(
     [&](Mat frame) {detector->timerHandler.computeTime("1_GRAYSCALE", [&]() { detector->gray(frame); }); return frame;},
-    [&](Mat frame) {pp2.run(frame);}
+    new Pipeline<Mat, Mat>(
+      [&](Mat frame) {detector->timerHandler.computeTime("2_SMOOTHING", [&]() { detector->smooth(frame); }); return frame;},
+      new Pipeline<Mat, Mat>(
+        [&](Mat frame) {detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { finalCallback(detector->makeDifference(frame), frame); }); return frame;}
+      )
+    )
   );
 
   detector->timerHandler.computeTime("TOTAL_TIME", [&]() { 
@@ -80,11 +77,9 @@ int analyzeFramesPipeline(Detector *detector, string videoPath) {
       Mat frame; 
       cap >> frame;
       if(frame.empty()) break;
-      pp1.run(frame);
+      pipeline->run(frame);
     }
-    pp1.wait();
-    pp2.wait();
-    pp3.wait();
+    pipeline->eosAndWait();
   });
 
   cap.release();
