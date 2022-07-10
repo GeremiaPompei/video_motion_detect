@@ -11,12 +11,18 @@ for nw in 1 2 4 8 16 32
 do
     ./build/main $videoPath $threshold PARALLEL SEQUENTIAL $nw
     ./build/main $videoPath $threshold PARALLEL PARALLEL $nw
-    ./build/main $videoPath $threshold PARALLEL FASTFLOW $nw
+    if (("$nw" <= "8"))
+    then
+        ./build/main $videoPath $threshold PARALLEL FASTFLOW $nw
+    fi
 done
 
 for nw in 1 2 4 8 16 32
 do
     ./build/main $videoPath $threshold FASTFLOW SEQUENTIAL $nw
     ./build/main $videoPath $threshold FASTFLOW PARALLEL $nw
-    ./build/main $videoPath $threshold FASTFLOW FASTFLOW $nw
+    if (("$nw" <= "8"))
+    then
+        ./build/main $videoPath $threshold FASTFLOW FASTFLOW $nw
+    fi
 done
