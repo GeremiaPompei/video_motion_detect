@@ -1,6 +1,6 @@
 #!/bin/bash
 
-videoPath="./media/test_1s.mp4"
+videoPath="./media/test_20s.mp4"
 threshold="0.4"
 formatter="CSV"
 
