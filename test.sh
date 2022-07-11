@@ -2,7 +2,7 @@
 
 videoPath="./media/test_1s.mp4"
 threshold="0.4"
-formatter="CSV"
+formatter=""
 
 ./build/main $videoPath $threshold SEQUENTIAL SEQUENTIAL 1 $formatter
 ./build/main $videoPath $threshold SEQUENTIAL PARALLEL 1 $formatter

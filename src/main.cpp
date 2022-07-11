@@ -12,14 +12,13 @@
 using namespace std;
 using namespace cv;
 
-void runAnalysis(string dpp, string spp, FramesShifter *framesShifter, string printMode)
+void runAnalysis(string dpp, string spp, FramesShifter *framesShifter, string printMode, int nw)
 {
   int differentFrames = framesShifter->run();
 
   if (printMode == "CSV")
   {
-    cout << dpp + "-" + spp << endl
-         << framesShifter->detector->timerHandler.toCSV();
+    cout << nw << ";" << framesShifter->detector->timerHandler.toCSV() << endl;
   }
   else
   {
@@ -78,7 +77,7 @@ int main(int argc, char *argv[])
     framesShifter = new FFFramesShifter(detector, videoPath);
   }
 
-  runAnalysis(dpp + nwLabel, spp, framesShifter, printMode);
+  runAnalysis(dpp + nwLabel, spp, framesShifter, printMode, nw);
 
   return (0);
 }
