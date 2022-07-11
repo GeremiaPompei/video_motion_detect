@@ -5,30 +5,36 @@
 using namespace std;
 using namespace cv;
 
-class SeqDetector : public Detector {
-    public:
-        SeqDetector(Mat _kernel, double _k) : Detector(_kernel, _k) {}
+class SeqDetector : public Detector
+{
+public:
+    SeqDetector(Mat _kernel, double _k) : Detector(_kernel, _k) {}
 
-        void gray(Mat frame) override {
-            for(int x=0;x<frame.rows;x++) {
-                this->rowGray(frame, x);
-            }
+    void gray(Mat frame) override
+    {
+        for (int x = 0; x < frame.rows; x++)
+        {
+            this->rowGray(frame, x);
         }
+    }
 
-        void smooth(Mat frame) override {
-            Mat origin = frame.clone();
-            for(int x=0;x<frame.rows;x++) {
-                this->rowSmooth(frame, origin, x);
-            }
+    void smooth(Mat frame) override
+    {
+        Mat origin = frame.clone();
+        for (int x = 0; x < frame.rows; x++)
+        {
+            this->rowSmooth(frame, origin, x);
         }
+    }
 
-        bool makeDifference(Mat frame) override {
-            int sum = 0;
-            int threshold = this->k * this->background.cols * this->background.rows;
-            for(int x=0;x<this->background.rows;x++) {
-                sum += this->rowMakeDifference(frame, x);
-            }
-            return sum >= threshold;
+    bool makeDifference(Mat frame) override
+    {
+        int sum = 0;
+        int threshold = this->k * this->background.cols * this->background.rows;
+        for (int x = 0; x < this->background.rows; x++)
+        {
+            sum += this->rowMakeDifference(frame, x);
         }
+        return sum >= threshold;
+    }
 };
- 
