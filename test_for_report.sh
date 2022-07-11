@@ -7,7 +7,7 @@ formatter="CSV"
 for spp in SEQUENTIAL PARALLEL FASTFLOW
 do
     echo "${spp}_PIPELINE"
-    echo "1_GRAYSCALE;2_SMOOTHING;3_DETECT_DIFFERENCE;TOTAL_TIME;"
+    echo "NW;1_GRAYSCALE;2_SMOOTHING;3_DETECT_DIFFERENCE;TOTAL_TIME;"
     ./build/main $videoPath $threshold SEQUENTIAL $spp 1 $formatter
     for ((nw=2;nw<=32;nw++))
     do
