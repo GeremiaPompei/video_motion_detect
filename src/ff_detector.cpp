@@ -2,12 +2,52 @@
 #include <opencv2/opencv.hpp>
 #include <functional>
 #include <mutex>
+#include <ff/ff.hpp>
 #include "detector.hpp"
-#include <ff/parallel_for.hpp>
 
 using namespace ff;
 using namespace std;
 using namespace cv;
+
+struct Task {
+    int i;
+};
+
+struct Emitter : ff_monode_t<Task>
+{
+    int max;
+
+    Emitter(int max)
+    {
+        this->max = max;
+    }
+
+    Task *svc(Task *)
+    {
+        for(int i = 0; i < this->max; i++)
+        {
+            ff_send_out(new Task{i});
+        }
+        return EOS;
+    }
+};
+
+struct Compute : ff_node_t<Task>
+{
+    function<void(int)> internalCallback;
+
+    Compute(function<void(int)> internalCallback)
+    {
+        this->internalCallback = internalCallback;
+    }
+
+    Task *svc(Task *task)
+    {
+        this->internalCallback(task->i);
+        return GO_ON;
+    }
+};
+
 
 class FFDetector : public Detector
 {
@@ -16,11 +56,15 @@ private:
 
     void runParallel(function<void(int)> internalCallback, Mat frame)
     {
-        ParallelFor pf;
-        pf.parallel_for(
-            0, frame.rows, [&](const long x)
-            { internalCallback(x); },
-            this->nw);
+        Emitter emitter(frame.rows);
+        Compute compute(internalCallback);
+        vector<unique_ptr<ff_node>> W;
+        for(int i = 0; i < this->nw; i++) {
+            W.push_back(make_unique<Compute>(compute));
+        }
+        ff_Farm<> farm(move(W));
+        farm.add_emitter(emitter);
+        farm.run_and_wait_end();
     }
 
 public:
