@@ -41,6 +41,25 @@ public:
         }
         return report;
     }
+
+    string toCSV()
+    {
+        string report;
+        map<string, double>::iterator it;
+        for (it = this->timers.begin(); it != this->timers.end(); it++)
+        {
+            report += it->first + ";";
+        }
+        report += "\n";
+        for (it = this->timers.begin(); it != this->timers.end(); it++)
+        {   
+            string time = to_string(it->second);
+            int pos = time.find(".");
+            report += time.replace(pos, pos + 1, ",") + ";";
+        }
+        report += "\n";
+        return report;
+    }
 };
 
 #endif

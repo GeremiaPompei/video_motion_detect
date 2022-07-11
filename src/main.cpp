@@ -12,15 +12,23 @@
 using namespace std;
 using namespace cv;
 
-void runAnalysis(string dpp, string spp, FramesShifter *framesShifter)
+void runAnalysis(string dpp, string spp, FramesShifter *framesShifter, string printMode)
 {
   int differentFrames = framesShifter->run();
 
-  cout << "--------------------------------" << endl
-       << "Data parallel pattern implementation: [" << dpp << "]" << endl
-       << "Pipeline implementation: [" << spp << "]" << endl
-       << "Number of different frames: " << differentFrames << endl
-       << framesShifter->detector->timerHandler.toString() << "--------------------------------" << endl;
+  if (printMode == "CSV")
+  {
+    cout << dpp + "-" + spp << endl
+         << framesShifter->detector->timerHandler.toCSV();
+  }
+  else
+  {
+    cout << "--------------------------------" << endl
+         << "Data parallel pattern implementation: [" << dpp << "]" << endl
+         << "Pipeline implementation: [" << spp << "]" << endl
+         << "Number of different frames: " << differentFrames << endl
+         << framesShifter->detector->timerHandler.toString() << "--------------------------------" << endl;
+  }
 }
 
 int main(int argc, char *argv[])
@@ -30,6 +38,12 @@ int main(int argc, char *argv[])
   string dpp = string(argv[3]);
   string spp = argv[4];
   string nwLabel = "";
+  int nw = 1;
+  string printMode = "";
+  if (argc > 5)
+    nw = atoi(argv[5]);
+  if (argc > 6)
+    printMode = argv[6];
 
   Mat kernel = avgKernel();
   Detector *detector;
@@ -41,7 +55,6 @@ int main(int argc, char *argv[])
   }
   else
   {
-    int nw = atoi(argv[5]);
     nwLabel = "_" + to_string(nw) + "_NW";
     if (dpp == "PARALLEL")
     {
@@ -65,7 +78,7 @@ int main(int argc, char *argv[])
     framesShifter = new FFFramesShifter(detector, videoPath);
   }
 
-  runAnalysis(dpp + nwLabel, spp, framesShifter);
+  runAnalysis(dpp + nwLabel, spp, framesShifter, printMode);
 
   return (0);
 }
