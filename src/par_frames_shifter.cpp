@@ -38,7 +38,7 @@ public:
                 {this->detector->timerHandler.computeTime("2_SMOOTHING", [&]() { this->detector->smooth(frame); }); return frame; },
                 new Pipeline<Mat, Mat>(
                     [&](Mat frame)
-                    {this->detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]() { finalCallback(this->detector->makeDifference(frame), frame); }); return frame; })));
+                    {this->detector->timerHandler.computeTime("3_DETECT_DIFFERENCE", [&]() { finalCallback(this->detector->detectDifference(frame), frame); }); return frame; })));
 
         this->detector->timerHandler.computeTime("TOTAL_TIME", [&]()
                                                  { 
@@ -50,7 +50,8 @@ public:
                     if(frame.empty()) break;
                     pipeline->run(frame);
                 }
-                pipeline->eosAndWait(); });
+                pipeline->eosAndWait(); 
+        });
 
         this->cap.release();
         return differentFrames;

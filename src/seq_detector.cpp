@@ -27,13 +27,13 @@ public:
         }
     }
 
-    bool makeDifference(Mat frame) override
+    bool detectDifference(Mat frame) override
     {
         int sum = 0;
         int threshold = this->k * this->background.cols * this->background.rows;
         for (int x = 0; x < this->background.rows; x++)
         {
-            sum += this->rowMakeDifference(frame, x);
+            sum += this->rowDetectDifference(frame, x);
         }
         return sum >= threshold;
     }

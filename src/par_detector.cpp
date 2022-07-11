@@ -61,14 +61,14 @@ public:
         this->runParallel(callback, frame);
     }
 
-    bool makeDifference(Mat frame) override
+    bool detectDifference(Mat frame) override
     {
         mutex m;
         int summedResult(0);
         int threshold = this->k * this->background.cols * this->background.rows;
         auto callback = [&](int x)
         {
-            int res = this->rowMakeDifference(frame, x);
+            int res = this->rowDetectDifference(frame, x);
             m.lock();
             summedResult += res;
             m.unlock();

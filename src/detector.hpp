@@ -25,7 +25,7 @@ public:
 
     virtual void gray(Mat frame) = 0;
     virtual void smooth(Mat frame) = 0;
-    virtual bool makeDifference(Mat frame) = 0;
+    virtual bool detectDifference(Mat frame) = 0;
 
     void rowGray(Mat frame, int x)
     {
@@ -60,7 +60,7 @@ public:
         }
     }
 
-    int rowMakeDifference(Mat frame, int x)
+    int rowDetectDifference(Mat frame, int x)
     {
         int sum = 0;
         for (int y = 0; y < this->background.cols; y++)
@@ -80,8 +80,8 @@ public:
                                        { this->gray(frame); });
         this->timerHandler.computeTime("2_SMOOTHING", [&]()
                                        { this->smooth(frame); });
-        this->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]()
-                                       { differs = this->makeDifference(frame); });
+        this->timerHandler.computeTime("3_DETECT_DIFFERENCE", [&]()
+                                       { differs = this->detectDifference(frame); });
         return differs;
     }
 

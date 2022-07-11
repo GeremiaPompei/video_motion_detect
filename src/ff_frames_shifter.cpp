@@ -76,12 +76,12 @@ struct Smoothing : ff_node_t<Mat>
     }
 };
 
-struct MakeDifference : ff_node_t<Mat>
+struct DetectDifference : ff_node_t<Mat>
 {
     Detector *detector;
     function<void(bool, Mat)> finalCallback;
 
-    MakeDifference(Detector *detector, function<void(bool, Mat)> finalCallback)
+    DetectDifference(Detector *detector, function<void(bool, Mat)> finalCallback)
     {
         this->detector = detector;
         this->finalCallback = finalCallback;
@@ -89,8 +89,8 @@ struct MakeDifference : ff_node_t<Mat>
 
     Mat *svc(Mat *frame)
     {
-        this->detector->timerHandler.computeTime("3_MAKE_DIFFERENCE", [&]()
-                                                 { this->finalCallback(this->detector->makeDifference(*frame), *frame); });
+        this->detector->timerHandler.computeTime("3_DETECT_DIFFERENCE", [&]()
+                                                 { this->finalCallback(this->detector->detectDifference(*frame), *frame); });
         return GO_ON;
     }
 };
@@ -119,8 +119,8 @@ public:
         Source source(this->detector, this->cap);
         GrayScale grayScale(this->detector);
         Smoothing smoothing(this->detector);
-        MakeDifference makeDifference(this->detector, finalCallback);
-        ff_Pipe<> pipe(source, grayScale, smoothing, makeDifference);
+        DetectDifference detectDifference(this->detector, finalCallback);
+        ff_Pipe<> pipe(source, grayScale, smoothing, detectDifference);
 
         this->detector->timerHandler.computeTime("TOTAL_TIME", [&]()
                                                  { pipe.run_and_wait_end(); });
