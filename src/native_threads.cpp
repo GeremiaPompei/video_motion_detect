@@ -114,7 +114,7 @@ private:
 
     bool detect(Mat frame, Mat background, int threshold)
     {
-        int sum = 0;
+        int differentFrames = 0;
         timerHandler.computeTime("3_DETECT", [&]()
                                  {
             for (int x = 0; x < background.rows; x++)
@@ -123,11 +123,11 @@ private:
                 {
                     if (background.at<Vec3b>(x, y) != frame.at<Vec3b>(x, y))
                     {
-                        sum ++;
+                        differentFrames ++;
                     }
                 }
             } });
-        return sum >= threshold;
+        return differentFrames >= threshold;
     }
 
 public:

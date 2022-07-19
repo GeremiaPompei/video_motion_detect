@@ -33,37 +33,45 @@ struct Emitter : ff_monode_t<Mat>
     }
 };
 
-struct Compute : ff_node_t<Mat>
+struct Compute : ff_node_t<Mat, bool>
 {
-    TimerHandler timerHandler;
+    TimerHandler *timerHandler;
     Mat kernel;
+    Mat *background;
+    int threshold;
 
-    Compute(TimerHandler timerHandler, Mat kernel)
+    Compute(TimerHandler *timerHandler, Mat kernel, Mat *background, int threshold)
     {
         this->timerHandler = timerHandler;
         this->kernel = kernel;
+        this->background = background;
+        this->threshold = threshold;
     }
 
-    Mat *svc(Mat *frame)
+    void gray(Mat frame)
     {
-        timerHandler.computeTime("1_GRAYSCALE", [&]()
+        timerHandler->computeTime("1_GRAYSCALE", [&]()
                                  {
-            for (int x = 0; x < frame->rows; x++)
+            for (int x = 0; x < frame.rows; x++)
             {
-                for (int y = 0; y < frame->cols; y++)
+                for (int y = 0; y < frame.cols; y++)
                 {
-                    Vec3b &color = frame->at<Vec3b>(x, y);
+                    Vec3b &color = frame.at<Vec3b>(x, y);
                     int bwColor = (color[0] + color[1] + color[2]) / 3;
                     for (int c = 0; c < 3; c++)
-                        frame->at<Vec3b>(x, y)[c] = bwColor;
+                        frame.at<Vec3b>(x, y)[c] = bwColor;
                 }
             } });
-        timerHandler.computeTime("2_SMOOTHING", [&]()
+    }
+
+    void smooth(Mat frame, Mat kernel)
+    {
+        timerHandler->computeTime("2_SMOOTHING", [&]()
                                  {
-            Mat origin = frame->clone();
-            for (int x = 0; x < frame->rows; x++)
+            Mat origin = frame.clone();
+            for (int x = 0; x < frame.rows; x++)
             {
-                for (int y = 0; y < frame->cols; y++)
+                for (int y = 0; y < frame.cols; y++)
                 {
                     int sum = 0;
                     for (int kx = 0; kx < kernel.rows; kx++)
@@ -72,57 +80,59 @@ struct Compute : ff_node_t<Mat>
                         for (int ky = 0; ky < kernel.cols; ky++)
                         {
                             int py = y + ky - kernel.cols / 2;
-                            if (px >= 0 && px < frame->rows && py >= 0 && py < frame->cols)
+                            if (px >= 0 && px < frame.rows && py >= 0 && py < frame.cols)
                             {
                                 sum += origin.at<Vec3b>(px, py)[0] * kernel.at<Vec3d>(kx)[ky];
                             }
                         }
                     }
                     for (int c = 0; c < 3; c++)
-                        frame->at<Vec3b>(x, y)[c] = sum;
+                        frame.at<Vec3b>(x, y)[c] = sum;
                 }
             } });
-        return frame;
-    }
-};
-
-struct Collector : ff_minode_t<Mat>
-{
-    int *differentFrames;
-    TimerHandler timerHandler;
-    Mat background;
-    int threshold;
-    mutex lock;
-
-    Collector(TimerHandler timerHandler, int *differentFrames, Mat background, int threshold)
-    {
-        this->timerHandler = timerHandler;
-        this->differentFrames = differentFrames;
-        this->background = background;
-        this->threshold = threshold;
     }
 
-    Mat *svc(Mat *frame)
+    bool detect(Mat frame, Mat background, int threshold)
     {
-        int sum = 0;
-        timerHandler.computeTime("3_DETECT", [&]()
+        int differentFrames = 0;
+        timerHandler->computeTime("3_DETECT", [&]()
                                  {
             for (int x = 0; x < background.rows; x++)
             {
                 for (int y = 0; y < background.cols; y++)
                 {
-                    if (background.at<Vec3b>(x, y) != frame->at<Vec3b>(x, y))
+                    if (background.at<Vec3b>(x, y) != frame.at<Vec3b>(x, y))
                     {
-                        sum ++;
+                        differentFrames ++;
                     }
                 }
-            }
-            if(sum >= threshold) {
-                lock.lock();
-                (*differentFrames)++; // TODO FIX
-                lock.unlock();
-            } 
-        });
+            } });
+        return differentFrames >= threshold;
+    }
+
+    bool *svc(Mat *frame)
+    {
+        gray(*frame);
+        smooth(*frame, kernel);
+        bool detected = detect(*frame, *background, threshold);
+        return new bool(detected);
+    }
+};
+
+struct Collector : ff_minode_t<bool, void>
+{
+    int *differentFrames;
+
+    Collector(int *differentFrames)
+    {
+        this->differentFrames = differentFrames;
+    }
+
+    void *svc(bool *detected)
+    {
+        if(*detected) {
+            (*differentFrames)++;
+        }
         return GO_ON;
     }
 };
@@ -130,7 +140,7 @@ struct Collector : ff_minode_t<Mat>
 class Fastflow
 {
 private:
-    TimerHandler timerHandler;
+    TimerHandler *timerHandler;
 
 public:
     void run(string videoPath, double k, Mat kernel, int nw)
@@ -138,13 +148,14 @@ public:
         int *differentFrames = new int(0);
         int *totalFrames = new int(0);
         VideoCapture cap = VideoCapture(videoPath);
-        Mat background;
-        cap >> background;
-        int threshold = k * background.cols * background.rows;
+        Mat *background = new Mat();
+        cap >> *background;
+        int threshold = k * background->cols * background->rows;
 
+        timerHandler = new TimerHandler();
         Emitter emitter(cap, totalFrames);
-        Compute compute(timerHandler, kernel);
-        Collector collector(timerHandler, differentFrames, background, threshold);
+        Compute compute(timerHandler, kernel, background, threshold);
+        Collector collector(differentFrames);
         vector<unique_ptr<ff_node>> W;
         for (int i = 0; i < nw; i++)
         {
@@ -154,11 +165,14 @@ public:
         farm.add_emitter(emitter);
         farm.add_collector(collector);
 
-        timerHandler.computeTime("TOTAL_TIME", [&]()
-                                 { farm.run_and_wait_end(); });
+        timerHandler->computeTime("TOTAL_TIME", [&]()
+                                 { 
+                                    compute.gray(*background);
+                                    compute.smooth(*background, kernel);
+                                    farm.run_and_wait_end(); });
 
         cap.release();
         cout << "FASTFLOW_" << to_string(nw) << "_nw: detection=" << *differentFrames << "/" << *totalFrames << endl
-             << timerHandler.toString() << endl;
+             << timerHandler->toString() << endl;
     }
 };
