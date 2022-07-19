@@ -15,3 +15,5 @@ for nw in 4 # 1 2 3 4 5 6 7 8
 do
     ./build/main $videoPath $threshold FASTFLOW $nw $formatter
 done
+
+./build/main $videoPath $threshold SEQUENTIAL 1 $formatter

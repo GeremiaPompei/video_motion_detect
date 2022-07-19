@@ -46,6 +46,8 @@ struct Compute : ff_node_t<Mat, bool>
         this->kernel = kernel;
         this->background = background;
         this->threshold = threshold;
+        gray(*background);
+        smooth(*background, kernel);
     }
 
     void gray(Mat frame)
@@ -140,7 +142,7 @@ struct Collector : ff_minode_t<bool, void>
 class Fastflow
 {
 private:
-    TimerHandler *timerHandler;
+    TimerHandler *timerHandler = new TimerHandler();;
 
 public:
     void run(string videoPath, double k, Mat kernel, int nw)
@@ -152,7 +154,6 @@ public:
         cap >> *background;
         int threshold = k * background->cols * background->rows;
 
-        timerHandler = new TimerHandler();
         Emitter emitter(cap, totalFrames);
         Compute compute(timerHandler, kernel, background, threshold);
         Collector collector(differentFrames);
@@ -166,10 +167,7 @@ public:
         farm.add_collector(collector);
 
         timerHandler->computeTime("TOTAL_TIME", [&]()
-                                 { 
-                                    compute.gray(*background);
-                                    compute.smooth(*background, kernel);
-                                    farm.run_and_wait_end(); });
+                                 { farm.run_and_wait_end(); });
 
         cap.release();
         cout << "FASTFLOW_" << to_string(nw) << "_nw: detection=" << *differentFrames << "/" << *totalFrames << endl
