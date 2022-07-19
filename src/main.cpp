@@ -1,83 +1,57 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <chrono>
-#include "utils.cpp"
-#include "seq_detector.cpp"
-#include "par_detector.cpp"
-#include "ff_detector.cpp"
-#include "seq_frames_shifter.cpp"
-#include "par_frames_shifter.cpp"
-#include "ff_frames_shifter.cpp"
+#include "sequential.cpp"
+#include "native_threads.cpp"
+#include "fastflow.cpp"
 
 using namespace std;
 using namespace cv;
 
-void runAnalysis(string dpp, string spp, FramesShifter *framesShifter, string printMode, int nw)
+Mat avgKernel() 
 {
-  int differentFrames = framesShifter->run();
-
-  if (printMode == "CSV")
-  {
-    cout << nw << ";" << framesShifter->detector->timerHandler.toCSV() << endl;
-  }
-  else
-  {
-    cout << "--------------------------------" << endl
-         << "Data parallel pattern implementation: [" << dpp << "]" << endl
-         << "Pipeline implementation: [" << spp << "]" << endl
-         << "Number of different frames: " << differentFrames << endl
-         << framesShifter->detector->timerHandler.toString() << "--------------------------------" << endl;
-  }
+  const int rows = 3, cols = 3;
+  Mat kernel = (Mat_<double>({
+    1, 1, 1,
+    1, 1, 1,
+    1, 1, 1,
+  })).reshape(3);
+  Scalar s = cv::sum(kernel);
+  for(int kx=0;kx<rows;kx++)
+    for(int ky=0;ky<cols;ky++)
+      kernel.at<double>(kx,ky) /= s[0];
+  return kernel;
 }
 
 int main(int argc, char *argv[])
 {
-  string videoPath = argv[1];
-  double k = atof(argv[2]);
-  string dpp = string(argv[3]);
-  string spp = argv[4];
-  string nwLabel = "";
-  int nw = 1;
-  string printMode = "";
-  if (argc > 5)
-    nw = atoi(argv[5]);
-  if (argc > 6)
-    printMode = argv[6];
-
-  Mat kernel = avgKernel();
-  Detector *detector;
-  FramesShifter *framesShifter;
-
-  if (dpp == "SEQUENTIAL")
-  {
-    detector = new SeqDetector(kernel, k);
-  }
-  else
-  {
-    nwLabel = "_" + to_string(nw) + "_NW";
-    if (dpp == "PARALLEL")
+    string videoPath = argv[1];
+    double k = atof(argv[2]);
+    string type = string(argv[3]);
+    int nw = 1;
+    string printMode = "";
+    if (argc > 4)
+        nw = atoi(argv[4]);
+    if (argc > 5)
+        printMode = argv[5];
+    Mat kernel =  avgKernel();
+    if (type == "SEQUENTIAL")
     {
-      detector = new ParDetector(kernel, k, nw);
+        Sequential detector;
+        detector.run(videoPath, k, kernel);
     }
-    else if (dpp == "FASTFLOW")
+    else
     {
-      detector = new FFDetector(kernel, k, nw);
+        if (type == "NATIVE_THREADS")
+        {
+          NativeThreads detector;
+          detector.run(videoPath, k, kernel, nw);
+        }
+        else if (type == "FASTFLOW")
+        {
+          Fastflow detector;
+          detector.run(videoPath, k, kernel, nw);
+        }
     }
-  }
-  if (spp == "SEQUENTIAL")
-  {
-    framesShifter = new SeqFramesShifter(detector, videoPath);
-  }
-  else if (spp == "PARALLEL")
-  {
-    framesShifter = new ParFramesShifter(detector, videoPath);
-  }
-  else if (spp == "FASTFLOW")
-  {
-    framesShifter = new FFFramesShifter(detector, videoPath);
-  }
-
-  runAnalysis(dpp + nwLabel, spp, framesShifter, printMode, nw);
-
-  return (0);
+    return (0);
 }

@@ -1,29 +1,17 @@
 #!/bin/bash
 
-videoPath="./media/test_1s.mp4"
-threshold="0.4"
+videoPath="./media/test_1m.mp4"
+threshold="0.8"
 formatter=""
 
-./build/main $videoPath $threshold SEQUENTIAL SEQUENTIAL 1 $formatter
-./build/main $videoPath $threshold SEQUENTIAL PARALLEL 1 $formatter
-./build/main $videoPath $threshold SEQUENTIAL FASTFLOW 1 $formatter
+./build/main $videoPath $threshold SEQUENTIAL 1 $formatter
 
-for nw in 1 2 4 8 16 32
+for nw in 1 2 3 4 5 6 7 8
 do
-    ./build/main $videoPath $threshold PARALLEL SEQUENTIAL $nw $formatter
-    if (("$nw" <= "8"))
-    then
-        ./build/main $videoPath $threshold PARALLEL PARALLEL $nw $formatter
-        ./build/main $videoPath $threshold PARALLEL FASTFLOW $nw $formatter
-    fi
+    ./build/main $videoPath $threshold NATIVE_THREADS $nw $formatter
 done
 
-for nw in 1 2 4 8 16 32
+for nw in 1 2 3 4 5 6 7 8
 do
-    ./build/main $videoPath $threshold FASTFLOW SEQUENTIAL $nw $formatter
-    if (("$nw" <= "8"))
-    then
-        ./build/main $videoPath $threshold FASTFLOW PARALLEL $nw $formatter
-        ./build/main $videoPath $threshold FASTFLOW FASTFLOW $nw $formatter
-    fi
+    ./build/main $videoPath $threshold FASTFLOW $nw $formatter
 done
