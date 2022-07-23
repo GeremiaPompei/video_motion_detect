@@ -134,7 +134,7 @@ public:
     void run(string videoPath, double k, Mat kernel, int nw)
     {
         int differentFrames = 0;
-        int totalFrames = 0;
+        int* totalFrames = new int(0);
         VideoCapture cap = VideoCapture(videoPath);
         Mat background;
         cap >> background;
@@ -164,14 +164,14 @@ public:
                 cap >> frame;
                 if (frame.empty())
                     break;
-                totalFrames++;
+                (*totalFrames)++;
                 tp.pushInput(frame);
             } 
             tp.wait();
         });
 
         cap.release();
-        cout << "NATIVE_THREADS_" << to_string(nw) << "_nw: detection=" << differentFrames << "/" << totalFrames << endl
+        cout << "NATIVE_THREADS_" << to_string(nw) << "_nw: detection=" << differentFrames << "/" << (*totalFrames) << endl
              << timerHandler.toString() << endl;
     }
 };
