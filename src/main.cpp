@@ -38,19 +38,19 @@ int main(int argc, char *argv[])
     if (type == "SEQUENTIAL")
     {
         Sequential detector;
-        detector.run(videoPath, k, kernel);
+        detector.run(videoPath, k, kernel, printMode);
     }
     else
     {
         if (type == "NATIVE_THREADS")
         {
           NativeThreads detector;
-          detector.run(videoPath, k, kernel, nw);
+          detector.run(videoPath, k, kernel, nw, printMode);
         }
         else if (type == "FASTFLOW")
         {
           Fastflow detector;
-          detector.run(videoPath, k, kernel, nw);
+          detector.run(videoPath, k, kernel, nw, printMode);
         }
     }
     return (0);

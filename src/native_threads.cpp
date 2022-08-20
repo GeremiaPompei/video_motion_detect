@@ -131,7 +131,7 @@ private:
     }
 
 public:
-    void run(string videoPath, double k, Mat kernel, int nw)
+    void run(string videoPath, double k, Mat kernel, int nw, string printMode)
     {
         int differentFrames = 0;
         int* totalFrames = new int(0);
@@ -171,7 +171,14 @@ public:
         });
 
         cap.release();
-        cout << "NATIVE_THREADS_" << to_string(nw) << "_nw: detection=" << differentFrames << "/" << (*totalFrames) << endl
-             << timerHandler.toString() << endl;
+        string title = "NATIVE_THREADS_" + to_string(nw) + "_nw: detection=" + to_string(differentFrames) + "/" + to_string(*totalFrames);
+        if (printMode == string("CSV"))
+        {
+            cout << title << ";" << to_string(nw) << ";" << timerHandler.toCSV() << endl;
+        }
+        else
+        {
+            cout << title << endl << timerHandler.toString() << endl;
+        }
     }
 };

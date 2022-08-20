@@ -75,7 +75,7 @@ private:
     }
 
 public:
-    void run(string videoPath, double k, Mat kernel)
+    void run(string videoPath, double k, Mat kernel, string printMode)
     {
         int differentFrames = 0;
         int totalFrames = 0;
@@ -103,7 +103,14 @@ public:
                 }
             } });
         cap.release();
-        cout << "SEQUENTIAL: detection=" << differentFrames << "/" << totalFrames << endl
-             << timerHandler.toString() << endl;
+        string title = "SEQUENTIAL: detection=" + to_string(differentFrames) + "/" + to_string(totalFrames);
+        if (printMode == string("CSV"))
+        {
+            cout << title << ";" << 1 << ";" << timerHandler.toCSV() << endl;
+        }
+        else
+        {
+            cout << title << endl << timerHandler.toString() << endl;
+        }
     }
 };

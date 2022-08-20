@@ -45,4 +45,4 @@ USER spm2021user
 COPY --chown=spm2021user . .
 
 RUN ./build.sh
-RUN ./test.sh
+# RUN ./test.sh

@@ -53,7 +53,7 @@ struct Compute : ff_node_t<Mat, bool>
     void gray(Mat frame)
     {
         timerHandler->computeTime("1_GRAYSCALE", [&]()
-                                 {
+                                  {
             for (int x = 0; x < frame.rows; x++)
             {
                 for (int y = 0; y < frame.cols; y++)
@@ -69,7 +69,7 @@ struct Compute : ff_node_t<Mat, bool>
     void smooth(Mat frame, Mat kernel)
     {
         timerHandler->computeTime("2_SMOOTHING", [&]()
-                                 {
+                                  {
             Mat origin = frame.clone();
             for (int x = 0; x < frame.rows; x++)
             {
@@ -98,7 +98,7 @@ struct Compute : ff_node_t<Mat, bool>
     {
         int differentFrames = 0;
         timerHandler->computeTime("3_DETECT", [&]()
-                                 {
+                                  {
             for (int x = 0; x < background.rows; x++)
             {
                 for (int y = 0; y < background.cols; y++)
@@ -132,7 +132,8 @@ struct Collector : ff_minode_t<bool, void>
 
     void *svc(bool *detected)
     {
-        if(*detected) {
+        if (*detected)
+        {
             (*differentFrames)++;
         }
         return GO_ON;
@@ -142,10 +143,10 @@ struct Collector : ff_minode_t<bool, void>
 class Fastflow
 {
 private:
-    TimerHandler *timerHandler = new TimerHandler();;
+    TimerHandler *timerHandler = new TimerHandler();
 
 public:
-    void run(string videoPath, double k, Mat kernel, int nw)
+    void run(string videoPath, double k, Mat kernel, int nw, string printMode)
     {
         int *differentFrames = new int(0);
         int *totalFrames = new int(0);
@@ -167,10 +168,17 @@ public:
         farm.add_collector(collector);
 
         timerHandler->computeTime("TOTAL_TIME", [&]()
-                                 { farm.run_and_wait_end(); });
+                                  { farm.run_and_wait_end(); });
 
         cap.release();
-        cout << "FASTFLOW_" << to_string(nw) << "_nw: detection=" << *differentFrames << "/" << *totalFrames << endl
-             << timerHandler->toString() << endl;
+        string title = "FASTFLOW_" + to_string(nw) + "_nw: detection=" + to_string(*differentFrames) + "/" + to_string(*totalFrames);
+        if (printMode == string("CSV"))
+        {
+            cout << title << ";" << to_string(nw) << ";" << timerHandler->toCSV() << endl;
+        }
+        else
+        {
+            cout << title << endl << timerHandler->toString() << endl;
+        }
     }
 };
