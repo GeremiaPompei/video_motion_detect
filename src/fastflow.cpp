@@ -7,7 +7,11 @@ using namespace std;
 using namespace cv;
 using namespace ff;
 
-struct Emitter : ff_monode_t<Mat>
+struct Task {
+    Mat frame;
+};
+
+struct Emitter : ff_monode_t<Task>
 {
     VideoCapture cap;
     int *totalFrames;
@@ -18,22 +22,24 @@ struct Emitter : ff_monode_t<Mat>
         this->totalFrames = totalFrames;
     }
 
-    Mat *svc(Mat *)
+    Task *svc(Task *)
     {
+        Task *task = new Task();
         while (true)
         {
-            Mat *frame = new Mat();
-            cap >> *frame;
-            if (frame->empty())
+            Mat frame; // TODO fix pinning and use outside loop while
+            cap >> frame;
+            if (frame.empty())
                 break;
             (*totalFrames)++;
-            ff_send_out(frame);
+            task->frame = frame;
+            ff_send_out(task);
         }
         return EOS;
     }
 };
 
-struct Compute : ff_node_t<Mat, void>
+struct Compute : ff_node_t<Task, void>
 {
     TimerHandler *timerHandler;
     Mat kernel;
@@ -114,9 +120,9 @@ struct Compute : ff_node_t<Mat, void>
         return differentFrames >= threshold;
     }
 
-    void *svc(Mat *frame)
+    void *svc(Task *task)
     {
-        Mat mat = *frame;
+        Mat mat = task->frame;
         gray(mat);
         smooth(mat, kernel);
         bool detected = detect(mat, background, threshold);
