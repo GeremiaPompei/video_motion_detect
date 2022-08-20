@@ -33,21 +33,23 @@ struct Emitter : ff_monode_t<Mat>
     }
 };
 
-struct Compute : ff_node_t<Mat, bool>
+struct Compute : ff_node_t<Mat, void>
 {
     TimerHandler *timerHandler;
     Mat kernel;
-    Mat *background;
+    Mat background;
     int threshold;
+    int *differentFrames;
 
-    Compute(TimerHandler *timerHandler, Mat kernel, Mat *background, int threshold)
+    Compute(TimerHandler *timerHandler, Mat kernel, Mat background, int threshold, int *differentFrames)
     {
         this->timerHandler = timerHandler;
         this->kernel = kernel;
         this->background = background;
         this->threshold = threshold;
-        gray(*background);
-        smooth(*background, kernel);
+        this->differentFrames = differentFrames;
+        gray(background);
+        smooth(background, kernel);
     }
 
     void gray(Mat frame)
@@ -112,27 +114,13 @@ struct Compute : ff_node_t<Mat, bool>
         return differentFrames >= threshold;
     }
 
-    bool *svc(Mat *frame)
+    void *svc(Mat *frame)
     {
-        gray(*frame);
-        smooth(*frame, kernel);
-        bool detected = detect(*frame, *background, threshold);
-        return new bool(detected);
-    }
-};
-
-struct Collector : ff_minode_t<bool, void>
-{
-    int *differentFrames;
-
-    Collector(int *differentFrames)
-    {
-        this->differentFrames = differentFrames;
-    }
-
-    void *svc(bool *detected)
-    {
-        if (*detected)
+        Mat mat = *frame;
+        gray(mat);
+        smooth(mat, kernel);
+        bool detected = detect(mat, background, threshold);
+        if (detected)
         {
             (*differentFrames)++;
         }
@@ -151,13 +139,12 @@ public:
         int *differentFrames = new int(0);
         int *totalFrames = new int(0);
         VideoCapture cap = VideoCapture(videoPath);
-        Mat *background = new Mat();
-        cap >> *background;
-        int threshold = k * background->cols * background->rows;
+        Mat background;
+        cap >> background;
+        int threshold = k * background.cols * background.rows;
 
         Emitter emitter(cap, totalFrames);
-        Compute compute(timerHandler, kernel, background, threshold);
-        Collector collector(differentFrames);
+        Compute compute(timerHandler, kernel, background, threshold, differentFrames);
         vector<unique_ptr<ff_node>> W;
         for (int i = 0; i < nw; i++)
         {
@@ -165,7 +152,7 @@ public:
         }
         ff_Farm<> farm(move(W));
         farm.add_emitter(emitter);
-        farm.add_collector(collector);
+        farm.remove_collector();
 
         timerHandler->computeTime("TOTAL_TIME", [&]()
                                   { farm.run_and_wait_end(); });

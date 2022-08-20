@@ -38,11 +38,13 @@ RUN apt update
 RUN apt install apt-utils
 RUN apt install -y g++-11
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
+### install htop
+RUN apt install -y htop
 ### fix user
 RUN useradd -ms /bin/bash spm2021user
 WORKDIR /home/spm2021user
 USER spm2021user
-COPY --chown=spm2021user . .
 
-RUN ./build.sh
+# COPY --chown=spm2021user . .
+# RUN ./build.sh
 # RUN ./test.sh
