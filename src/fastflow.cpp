@@ -49,15 +49,15 @@ struct Compute : ff_node_t<Task, void>
     Mat kernel;
     Mat background;
     int threshold;
-    int *differentFrames;
+    function<void(bool)> collect;
 
-    Compute(TimerHandler *timerHandler, Mat kernel, Mat background, int threshold, int *differentFrames)
+    Compute(TimerHandler *timerHandler, Mat kernel, Mat background, int threshold, function<void(bool)> collect)
     {
         this->timerHandler = timerHandler;
         this->kernel = kernel;
         this->background = background;
         this->threshold = threshold;
-        this->differentFrames = differentFrames;
+        this->collect = collect;
         gray(background);
         smooth(background, kernel);
     }
@@ -133,10 +133,7 @@ struct Compute : ff_node_t<Task, void>
         gray(mat);
         smooth(mat, kernel);
         bool detected = detect(mat, background, threshold);
-        if (detected)
-        {
-            (*differentFrames)++;
-        }
+        this->collect(detected);
         return GO_ON;
     }
 };
@@ -149,15 +146,23 @@ private:
 public:
     void run(string videoPath, double k, Mat kernel, int nw, string printMode)
     {
-        int *differentFrames = new int(0);
+        int differentFrames = 0;
         int *totalFrames = new int(0);
         VideoCapture cap = VideoCapture(videoPath);
         Mat background;
         cap >> background;
         int threshold = k * background.cols * background.rows;
+        mutex lock;
+        auto collect = [&] (bool detected) {
+            if(detected) {
+                lock.lock();
+                differentFrames++;
+                lock.unlock();
+            }
+        };
 
         Emitter emitter(cap, totalFrames);
-        Compute compute(timerHandler, kernel, background, threshold, differentFrames);
+        Compute compute(timerHandler, kernel, background, threshold, collect);
         vector<unique_ptr<ff_node>> W;
         for (int i = 0; i < nw; i++)
         {
@@ -171,7 +176,7 @@ public:
                                   { farm.run_and_wait_end(); });
 
         cap.release();
-        string title = "FASTFLOW_" + to_string(nw) + "_nw: detection=" + to_string(*differentFrames) + "/" + to_string(*totalFrames);
+        string title = "FASTFLOW_" + to_string(nw) + "_nw: detection=" + to_string(differentFrames) + "/" + to_string(*totalFrames);
         if (printMode == string("CSV"))
         {
             cout << title << ";" << to_string(nw) << ";" << timerHandler->toCSV() << endl;
