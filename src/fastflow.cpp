@@ -1,5 +1,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <queue>
+#include <mutex>
 #include <ff/ff.hpp>
 #include "timer_handler.hpp"
 
@@ -7,8 +9,10 @@ using namespace std;
 using namespace cv;
 using namespace ff;
 
-struct Task {
-    Mat frame;
+struct Task
+{
+    queue<Mat> buffer;
+    mutex lock;
 };
 
 struct Emitter : ff_monode_t<Task>
@@ -27,12 +31,12 @@ struct Emitter : ff_monode_t<Task>
         Task *task = new Task();
         while (true)
         {
-            Mat frame; // TODO fix pinning and use outside loop while
+            Mat frame;
             cap >> frame;
             if (frame.empty())
                 break;
             (*totalFrames)++;
-            task->frame = frame;
+            task->buffer.push(frame);
             ff_send_out(task);
         }
         return EOS;
@@ -122,7 +126,10 @@ struct Compute : ff_node_t<Task, void>
 
     void *svc(Task *task)
     {
-        Mat mat = task->frame;
+        task->lock.lock();
+        Mat mat = task->buffer.front();
+        task->buffer.pop();
+        task->lock.unlock();
         gray(mat);
         smooth(mat, kernel);
         bool detected = detect(mat, background, threshold);
@@ -171,7 +178,8 @@ public:
         }
         else
         {
-            cout << title << endl << timerHandler->toString() << endl;
+            cout << title << endl
+                 << timerHandler->toString() << endl;
         }
     }
 };
