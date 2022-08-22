@@ -20,14 +20,13 @@ private:
 
     void run()
     {
-        queue<Mat> inputs = *this->inputs;
-        while (!EOS || inputs.size() > 0)
+        while (!EOS || inputs->size() > 0)
         {
             lock.lock();
-            if (inputs.size() > 0)
+            if (inputs->size() > 0)
             {
-                Mat data = inputs.front();
-                inputs.pop();
+                Mat data = inputs->front();
+                inputs->pop();
                 lock.unlock();
                 callback(data);
             }
