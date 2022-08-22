@@ -152,7 +152,7 @@ public:
                 lock.unlock();
             }
         };
-        ThreadPool tp(nw, callback);
+        ThreadPool* tp = new ThreadPool(nw, callback);
 
         timerHandler.computeTime("TOTAL_TIME", [&]()
                                  {
@@ -165,9 +165,9 @@ public:
                 if (frame.empty())
                     break;
                 (*totalFrames)++;
-                tp.pushInput(frame);
+                tp->pushInput(frame);
             } 
-            tp.wait();
+            tp->wait();
         });
 
         cap.release();
