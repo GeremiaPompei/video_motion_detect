@@ -13,19 +13,20 @@ class ThreadPool
 {
 private:
     vector<thread *> threads;
-    queue<Mat> inputs;
+    queue<Mat>* inputs = new queue<Mat>();
     mutex lock;
     function<void(Mat)> callback;
     bool EOS = false;
 
     void run()
     {
+        queue<Mat> inputs = *this->inputs;
         while (!EOS || inputs.size() > 0)
         {
             lock.lock();
             if (inputs.size() > 0)
             {
-                auto data = inputs.front();
+                Mat data = inputs.front();
                 inputs.pop();
                 lock.unlock();
                 callback(data);
@@ -50,7 +51,7 @@ public:
 
     void pushInput(Mat frame)
     {
-        inputs.push(frame);
+        inputs->push(frame);
     }
 
     void wait()
@@ -152,7 +153,7 @@ public:
                 lock.unlock();
             }
         };
-        ThreadPool* tp = new ThreadPool(nw, callback);
+        ThreadPool tp(nw, callback);
 
         timerHandler.computeTime("TOTAL_TIME", [&]()
                                  {
@@ -165,9 +166,9 @@ public:
                 if (frame.empty())
                     break;
                 (*totalFrames)++;
-                tp->pushInput(frame);
+                tp.pushInput(frame);
             } 
-            tp->wait();
+            tp.wait();
         });
 
         cap.release();
