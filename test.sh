@@ -4,7 +4,7 @@ videoPath="./media/test_1m.mp4"
 threshold="0.8"
 formatter=""
 
-for ((nw=30;nw>=2;nw--))
+for ((nw=0;nw<=30;nw++))
 do
     ./build/main $videoPath $threshold NATIVE_THREADS $nw $formatter
     ./build/main $videoPath $threshold FASTFLOW $nw $formatter
