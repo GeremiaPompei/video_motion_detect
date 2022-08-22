@@ -43,7 +43,7 @@ struct Emitter : ff_monode_t<Task>
     }
 };
 
-struct Compute : ff_node_t<Task, void>
+struct Worker : ff_node_t<Task, void>
 {
     TimerHandler *timerHandler;
     Mat kernel;
@@ -51,7 +51,7 @@ struct Compute : ff_node_t<Task, void>
     int threshold;
     function<void(bool)> collect;
 
-    Compute(TimerHandler *timerHandler, Mat kernel, Mat background, int threshold, function<void(bool)> collect)
+    Worker(TimerHandler *timerHandler, Mat kernel, Mat background, int threshold, function<void(bool)> collect)
     {
         this->timerHandler = timerHandler;
         this->kernel = kernel;
@@ -162,11 +162,11 @@ public:
         };
 
         Emitter emitter(cap, totalFrames);
-        Compute compute(timerHandler, kernel, background, threshold, collect);
+        Worker worker(timerHandler, kernel, background, threshold, collect);
         vector<unique_ptr<ff_node>> W;
         for (int i = 0; i < nw; i++)
         {
-            W.push_back(make_unique<Compute>(compute));
+            W.push_back(make_unique<Worker>(worker));
         }
         ff_Farm<> farm(move(W));
         farm.add_emitter(emitter);
